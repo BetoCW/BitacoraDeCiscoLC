@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Plus } from 'lucide-react';
-import { format, isSameDay } from 'date-fns';
+import { X, Plus, Package } from 'lucide-react';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Booking } from '@/types';
+import { Booking, Material } from '@/types';
 import { cn } from '@/lib/utils';
+import MaterialModal from './MaterialModal';
+import BookingService from '@/lib/bookingService';
 
 interface DayDetailModalProps {
   isOpen: boolean;
@@ -11,6 +14,7 @@ interface DayDetailModalProps {
   date: Date | null;
   bookings: Booking[];
   onNewBooking: (date: Date) => void;
+  onBookingUpdate: () => void; // Para refrescar la lista cuando se actualicen materiales
 }
 
 const timeToMinutes = (time: string) => {
@@ -31,7 +35,10 @@ const getBookingStyle = (booking: Booking, hourHeight: number, startHour: number
   };
 };
 
-export default function DayDetailModal({ isOpen, onClose, date, bookings, onNewBooking }: DayDetailModalProps) {
+export default function DayDetailModal({ isOpen, onClose, date, bookings, onNewBooking, onBookingUpdate }: DayDetailModalProps) {
+  const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
   if (!date) return null;
 
   const startHour = 7;
@@ -43,7 +50,19 @@ export default function DayDetailModal({ isOpen, onClose, date, bookings, onNewB
   const handleBookClick = () => {
     onNewBooking(date);
     onClose();
-  }
+  };
+
+  const handleMaterialsClick = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setIsMaterialModalOpen(true);
+  };
+
+  const handleSaveMaterials = (materials: Material[]) => {
+    if (selectedBooking) {
+      BookingService.updateBookingMaterials(selectedBooking.id, materials);
+      onBookingUpdate(); // Refrescar la lista en el componente padre
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -89,14 +108,32 @@ export default function DayDetailModal({ isOpen, onClose, date, bookings, onNewB
                     <div
                       key={booking.id}
                       className={cn(
-                        "absolute left-2 right-2 p-2 rounded-lg text-white text-xs flex flex-col overflow-hidden shadow",
-                        booking.professor === 'Miguel Ángel' ? 'bg-amber-500 border-amber-600' : 'bg-blue-500 border-blue-600'
+                        "absolute left-2 right-2 p-2 rounded-lg text-white text-xs flex flex-col overflow-hidden shadow group cursor-pointer",
+                        booking.professor === 'Miguel' ? 'bg-amber-500 border-amber-600 hover:bg-amber-600' : 'bg-blue-500 border-blue-600 hover:bg-blue-600'
                       )}
                       style={getBookingStyle(booking, hourHeight, startHour)}
+                      onClick={() => handleMaterialsClick(booking)}
                     >
-                      <p className="font-bold truncate">{booking.title}</p>
-                      <p className="truncate">{booking.professor}</p>
-                      <p className="mt-auto">{booking.startTime} - {booking.endTime}</p>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold truncate">{booking.student.name}</p>
+                          <p className="truncate text-xs opacity-90">#{booking.student.controlNumber}</p>
+                          <p className="truncate text-xs">{booking.subject}</p>
+                          <p className="truncate">{booking.professor}</p>
+                        </div>
+                        <Package size={12} className="opacity-70 group-hover:opacity-100" />
+                      </div>
+                      
+                      {booking.materials && booking.materials.length > 0 && (
+                        <div className="mt-1 text-xs opacity-90">
+                          📦 {booking.materials.length} material(es)
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between items-end mt-auto">
+                        <p className="text-xs">{booking.startTime} - {booking.endTime}</p>
+                        <p className="text-xs opacity-70">Click para materiales</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -115,6 +152,20 @@ export default function DayDetailModal({ isOpen, onClose, date, bookings, onNewB
             </div>
           </motion.div>
         </motion.div>
+      )}
+      
+      {/* Material Modal */}
+      {selectedBooking && (
+        <MaterialModal
+          isOpen={isMaterialModalOpen}
+          onClose={() => {
+            setIsMaterialModalOpen(false);
+            setSelectedBooking(null);
+          }}
+          onSave={handleSaveMaterials}
+          initialMaterials={selectedBooking.materials || []}
+          studentName={selectedBooking.student.name}
+        />
       )}
     </AnimatePresence>
   );

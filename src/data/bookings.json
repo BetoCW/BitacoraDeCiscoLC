@@ -1,0 +1,63 @@
+{
+  "bookings": [
+    {
+      "id": "1",
+      "professor": "Bernabé",
+      "student": {
+        "name": "Daniel Partida",
+        "controlNumber": "22400632"
+      },
+      "subject": "Redes",
+      "day": "2025-11-04T00:00:00.000Z",
+      "startTime": "07:00",
+      "endTime": "09:00",
+      "duration": 2,
+      "materials": [
+        {
+          "id": "mat1",
+          "name": "Cable Ethernet",
+          "quantity": 8,
+          "category": "Cables"
+        },
+        {
+          "id": "mat2", 
+          "name": "Cable Consola",
+          "quantity": 2,
+          "category": "Cables"
+        },
+        {
+          "id": "mat3",
+          "name": "Cisco 2911",
+          "quantity": 3,
+          "category": "Routers"
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "professor": "Miguel",
+      "student": {
+        "name": "María González López",
+        "controlNumber": "20401234"
+      },
+      "subject": "Conmutación",
+      "day": "2025-11-04T00:00:00.000Z",
+      "startTime": "17:00",
+      "endTime": "19:00",
+      "duration": 2
+    },
+    {
+      "id": "3",
+      "professor": "Olivares",
+      "student": {
+        "name": "Carlos Rodríguez Martín",
+        "controlNumber": "20405678"
+      },
+      "subject": "Administración",
+      "day": "2025-11-05T00:00:00.000Z",
+      "startTime": "09:00",
+      "endTime": "10:30",
+      "duration": 1.5
+    }
+  ]
+}
