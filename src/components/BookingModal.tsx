@@ -8,9 +8,12 @@ import BookingService from '@/lib/bookingService';
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddBooking: (booking: Omit<Booking, 'id'>) => void;
+  onAddBooking?: (booking: Omit<Booking, 'id'>) => void;
+  onUpdateBooking?: (id: string, booking: Omit<Booking, 'id'>) => void;
   existingBookings: Booking[];
   selectedDate: Date | null;
+  mode?: 'create' | 'edit';
+  initialBooking?: Booking | null;
 }
 
 const professors: Professor[] = ['Olivares', 'Bernabé','Miguel'];
@@ -29,7 +32,7 @@ const generateTimeSlots = (startHour: number, endHour: number) => {
 // Todos los horarios disponibles: 7am - 9pm
 const allTimeSlots = generateTimeSlots(7, 21);
 
-export default function BookingModal({ isOpen, onClose, onAddBooking, existingBookings, selectedDate }: BookingModalProps) {
+export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBooking, existingBookings, selectedDate, mode = 'create', initialBooking = null }: BookingModalProps) {
   const [studentName, setStudentName] = useState('');
   const [controlNumber, setControlNumber] = useState('');
   const [subject, setSubject] = useState<Subject>('Redes');
@@ -40,23 +43,34 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, existingBo
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (selectedDate) {
+    if (selectedDate && mode === 'create') {
       setDate(format(selectedDate, 'yyyy-MM-dd'));
     }
-  }, [selectedDate, isOpen]);
+  }, [selectedDate, isOpen, mode]);
 
   useEffect(() => {
-    // Reset fields when modal opens
+    // Set fields when modal opens
     if (isOpen) {
-      setStudentName('');
-      setControlNumber('');
-      setSubject('Redes');
-      setProfessor('Olivares');
-      setStartTime('09:00');
-      setEndTime('11:00');
+      if (mode === 'edit' && initialBooking) {
+        setStudentName(initialBooking.student.name);
+        setControlNumber(initialBooking.student.controlNumber);
+        setSubject(initialBooking.subject);
+        setProfessor(initialBooking.professor);
+        setDate(format(initialBooking.day, 'yyyy-MM-dd'));
+        setStartTime(initialBooking.startTime);
+        setEndTime(initialBooking.endTime);
+      } else {
+        setStudentName('');
+        setControlNumber('');
+        setSubject('Redes');
+        setProfessor('Olivares');
+        setStartTime('09:00');
+        setEndTime('11:00');
+        if (selectedDate) setDate(format(selectedDate, 'yyyy-MM-dd'));
+      }
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, mode, initialBooking, selectedDate]);
 
   // Todos los horarios disponibles para seleccionar (la validación se hace al enviar)
   const availableTimeSlots = useMemo(() => {
@@ -102,17 +116,18 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, existingBo
 
 
     // Validar conflictos (no horas sobrepuestas)
+    const excludeId = mode === 'edit' && initialBooking ? initialBooking.id : undefined;
     if (BookingService.hasTimeConflict({
       day: newBookingDate,
       startTime,
       endTime,
       professor
-    }, existingBookings)) {
+    }, existingBookings, excludeId)) {
       setError('Ya existe una reserva en ese horario. No se permiten horas sobrepuestas.');
       return;
     }
 
-    onAddBooking({
+    const payload: Omit<Booking, 'id'> = {
       student: {
         name: studentName,
         controlNumber: controlNumber
@@ -123,7 +138,13 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, existingBo
       startTime,
       endTime,
       duration: durationValidation.duration,
-    });
+    };
+
+    if (mode === 'edit' && initialBooking && onUpdateBooking) {
+      onUpdateBooking(initialBooking.id, payload);
+    } else if (onAddBooking) {
+      onAddBooking(payload);
+    }
     
     onClose();
   };
@@ -135,18 +156,18 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, existingBo
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          className={`fixed inset-0 bg-black/50 ${mode === 'edit' ? 'z-[70]' : 'z-50'} flex items-center justify-center p-4`}
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, y: 20 }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto relative"
+            className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto relative ${mode === 'edit' ? 'ring-2 ring-blue-500' : ''}`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Nueva Reserva</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{mode === 'edit' ? 'Editar Reserva' : 'Nueva Reserva'}</h2>
               <button onClick={onClose} className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                 <X size={20} />
               </button>
@@ -283,7 +304,7 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, existingBo
                 form="booking-form"
                 className="w-full bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
               >
-                Confirmar Reserva
+                {mode === 'edit' ? 'Guardar Cambios' : 'Confirmar Reserva'}
               </button>
             </div>
           </motion.div>

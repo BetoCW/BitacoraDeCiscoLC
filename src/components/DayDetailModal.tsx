@@ -15,6 +15,8 @@ interface DayDetailModalProps {
   bookings: Booking[];
   onNewBooking: (date: Date) => void;
   onBookingUpdate: () => void; // Para refrescar la lista cuando se actualicen materiales
+  onEditBooking?: (booking: Booking) => void;
+  onDeleteBooking?: (bookingId: string) => void;
 }
 
 const timeToMinutes = (time: string) => {
@@ -35,9 +37,11 @@ const getBookingStyle = (booking: Booking, hourHeight: number, startHour: number
   };
 };
 
-export default function DayDetailModal({ isOpen, onClose, date, bookings, onNewBooking, onBookingUpdate }: DayDetailModalProps) {
+export default function DayDetailModal({ isOpen, onClose, date, bookings, onNewBooking, onBookingUpdate, onEditBooking, onDeleteBooking }: DayDetailModalProps) {
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [actionBooking, setActionBooking] = useState<Booking | null>(null);
+  const [showActions, setShowActions] = useState(false);
 
   if (!date) return null;
 
@@ -55,6 +59,26 @@ export default function DayDetailModal({ isOpen, onClose, date, bookings, onNewB
   const handleMaterialsClick = (booking: Booking) => {
     setSelectedBooking(booking);
     setIsMaterialModalOpen(true);
+  };
+
+  const handleActionsDblClick = (booking: Booking) => {
+    setActionBooking(booking);
+    setShowActions(true);
+  };
+
+  const handleEditClick = () => {
+    if (actionBooking && onEditBooking) onEditBooking(actionBooking);
+    setShowActions(false);
+  };
+
+  const handleDeleteClick = () => {
+    if (actionBooking && onDeleteBooking) {
+      const ok = window.confirm('¿Seguro que deseas eliminar esta reserva?');
+      if (ok) {
+        onDeleteBooking(actionBooking.id);
+        setShowActions(false);
+      }
+    }
   };
 
   const handleSaveMaterials = (materials: Material[]) => {
@@ -112,7 +136,7 @@ export default function DayDetailModal({ isOpen, onClose, date, bookings, onNewB
                         booking.professor === 'Miguel' ? 'bg-amber-500 border-amber-600 hover:bg-amber-600' : 'bg-blue-500 border-blue-600 hover:bg-blue-600'
                       )}
                       style={getBookingStyle(booking, hourHeight, startHour)}
-                      onClick={() => handleMaterialsClick(booking)}
+                      onDoubleClick={() => handleActionsDblClick(booking)}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0">
@@ -130,9 +154,11 @@ export default function DayDetailModal({ isOpen, onClose, date, bookings, onNewB
                         </div>
                       )}
                       
-                      <div className="flex justify-between items-end mt-auto">
+                      <div className="flex justify-between items-end mt-auto gap-2">
                         <p className="text-xs">{booking.startTime} - {booking.endTime}</p>
-                        <p className="text-xs opacity-70">Click para materiales</p>
+                        <button onClick={() => handleMaterialsClick(booking)} className="text-[10px] bg-white/20 hover:bg-white/30 px-2 py-1 rounded">
+                          Materiales
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -167,6 +193,34 @@ export default function DayDetailModal({ isOpen, onClose, date, bookings, onNewB
           studentName={selectedBooking.student.name}
         />
       )}
+
+      {/* Actions Modal for double click */}
+      <AnimatePresence>
+        {showActions && actionBooking && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
+            onClick={() => setShowActions(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Opciones de Reserva</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 truncate">{actionBooking.student.name} • {actionBooking.startTime}-{actionBooking.endTime}</p>
+              <div className="flex gap-3">
+                <button onClick={handleEditClick} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-2 rounded-md">Actualizar</button>
+                <button onClick={handleDeleteClick} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-2 rounded-md">Eliminar</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }
