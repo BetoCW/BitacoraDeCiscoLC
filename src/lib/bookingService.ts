@@ -241,7 +241,8 @@ class BookingService {
     const duration = (endMinutes - startMinutes) / 60; // Convert to hours
 
     return {
-      isValid: duration >= 1 && duration <= 2,
+      // Nueva regla: mínimo 2 horas, sin máximo
+      isValid: duration >= 2,
       duration
     };
   }

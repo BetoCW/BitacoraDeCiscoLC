@@ -106,10 +106,10 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
       return;
     }
 
-    // Validar duración (1-2 horas)
+    // Validar duración (mínimo 2 horas)
     const durationValidation = BookingService.isValidDuration(startTime, endTime);
     if (!durationValidation.isValid) {
-      setError('La duración de la reserva debe ser entre 1 y 2 horas.');
+      setError('La duración de la reserva debe ser mínimo 2 horas.');
       return;
     }
 
@@ -285,8 +285,8 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
                 <ul className="list-disc list-inside ml-2 text-xs">
                   <li>No se puede apartar más de 1 vez si en esa hora y día ya está apartado</li>
                   <li>No debe existir horas sobrepuestas</li>
-                  <li>Máximo 2 horas</li>
-                  <li>Mínimo 1 hora</li>
+                  <li>Mínimo 2 horas</li>
+                  <li>Sin límite máximo (permitido para exámenes)</li>
                 </ul>
               </div>
 

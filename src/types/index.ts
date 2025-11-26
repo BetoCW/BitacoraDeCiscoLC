@@ -27,6 +27,6 @@ export interface Booking {
   day: Date;
   startTime: string; // e.g., "09:00"
   endTime: string; // e.g., "11:00"
-  duration: number; // hours (2-3)
+  duration: number; // hours (>= 2)
   materials?: Material[]; // Optional materials list
 }
