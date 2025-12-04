@@ -5,6 +5,7 @@ import MonthlyCalendar from './MonthlyCalendar';
 import BookingModal from './BookingModal';
 import DayDetailModal from './DayDetailModal';
 import DataManager from './DataManager';
+import AdminPanel from './AdminPanel';
 import { Booking } from '@/types';
 import BookingService from '@/lib/bookingService';
 
@@ -19,6 +20,7 @@ export default function Calendar() {
     const [selectedDateForNewBooking, setSelectedDateForNewBooking] = useState<Date | null>(null);
     const [selectedDateForDetail, setSelectedDateForDetail] = useState<Date | null>(null);
     const [bookingToEdit, setBookingToEdit] = useState<Booking | null>(null);
+    const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
 
     // Cargar datos al inicializar
     useEffect(() => {
@@ -95,6 +97,12 @@ export default function Calendar() {
         setBookings(updatedBookings);
     };
 
+    const handleConfigChange = () => {
+        // Forzar recarga cuando cambie la configuración de profesores/materias
+        const updatedBookings = BookingService.loadBookings();
+        setBookings(updatedBookings);
+    };
+
     if (isLoading) {
         return (
             <div className="p-8 max-w-screen-2xl mx-auto flex items-center justify-center min-h-screen">
@@ -113,6 +121,7 @@ export default function Calendar() {
                 onNextMonth={handleNextMonth}
                 onToday={handleToday}
                 onNewBooking={() => handleOpenNewBooking()}
+                onOpenAdmin={() => setIsAdminPanelOpen(true)}
             />
             
             {/* Gestor de Datos */}
@@ -148,6 +157,11 @@ export default function Calendar() {
                 onBookingUpdate={handleBookingUpdate}
                 onEditBooking={handleEditRequest}
                 onDeleteBooking={handleDeleteBooking}
+            />
+            <AdminPanel
+                isOpen={isAdminPanelOpen}
+                onClose={() => setIsAdminPanelOpen(false)}
+                onConfigChange={handleConfigChange}
             />
         </div>
     );

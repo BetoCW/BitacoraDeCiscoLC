@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Settings } from 'lucide-react';
 
 interface CalendarHeaderProps {
     currentMonth: Date;
@@ -8,9 +8,10 @@ interface CalendarHeaderProps {
     onNextMonth: () => void;
     onToday: () => void;
     onNewBooking: () => void;
+    onOpenAdmin: () => void;
 }
 
-export default function CalendarHeader({ currentMonth, onPrevMonth, onNextMonth, onToday, onNewBooking }: CalendarHeaderProps) {
+export default function CalendarHeader({ currentMonth, onPrevMonth, onNextMonth, onToday, onNewBooking, onOpenAdmin }: CalendarHeaderProps) {
     return (
         <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
             <div className="flex items-center gap-2 sm:gap-4">
@@ -26,6 +27,10 @@ export default function CalendarHeader({ currentMonth, onPrevMonth, onNextMonth,
                 </div>
             </div>
             <div className="flex items-center gap-4">
+                <button onClick={onOpenAdmin} className="flex items-center gap-2 bg-gray-700 text-white font-semibold px-4 py-2 rounded-md hover:bg-gray-800 transition-colors shadow">
+                    <Settings size={18} />
+                    <span className="hidden sm:inline">Administración</span>
+                </button>
                 <button onClick={onNewBooking} className="flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition-colors shadow">
                     <Plus size={18} />
                     <span className="hidden sm:inline">Reservar</span>

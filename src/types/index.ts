@@ -1,11 +1,10 @@
-export type Professor = 'Olivares' | 'Bernabé' | 'Miguel';
+// Tipos dinámicos - se gestionan desde la interfaz de administración
+export type Professor = string;
+export type Subject = string;
 
-// Horarios:
-// Olivares & Bernabé: 7am - 5pm (día) - COMPARTEN HORAS
-// Olivares: 5pm - 9pm (noche)
-// Miguel: 5pm - 9pm - NO COMPARTE HORAS CON NADIE
-
-export type Subject = 'Redes' | 'Conmutación' | 'Administración';
+// Configuración por defecto (se puede modificar)
+export const DEFAULT_PROFESSORS: string[] = ['Olivares', 'Bernabé', 'Miguel'];
+export const DEFAULT_SUBJECTS: string[] = ['Redes', 'Conmutación', 'Administración'];
 
 export interface Student {
   name: string;
@@ -27,6 +26,6 @@ export interface Booking {
   day: Date;
   startTime: string; // e.g., "09:00"
   endTime: string; // e.g., "11:00"
-  duration: number; // hours (>= 2)
+  duration: number; // hours (sin límite)
   materials?: Material[]; // Optional materials list
 }

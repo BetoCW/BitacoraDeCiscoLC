@@ -234,17 +234,11 @@ class BookingService {
     return date >= today;
   }
 
-  // Validar duración (1-2 horas)
-  static isValidDuration(startTime: string, endTime: string): { isValid: boolean; duration: number } {
+  // Calcular duración sin validación (cualquier duración permitida)
+  static calculateDuration(startTime: string, endTime: string): number {
     const startMinutes = this.timeToMinutes(startTime);
     const endMinutes = this.timeToMinutes(endTime);
-    const duration = (endMinutes - startMinutes) / 60; // Convert to hours
-
-    return {
-      // Nueva regla: mínimo 2 horas, sin máximo
-      isValid: duration >= 2,
-      duration
-    };
+    return (endMinutes - startMinutes) / 60; // Convert to hours
   }
 
 

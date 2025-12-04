@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { Booking, Professor, Subject } from '@/types';
+import { Booking } from '@/types';
 import { format, parse } from 'date-fns';
 import BookingService from '@/lib/bookingService';
+import ConfigService from '@/lib/configService';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -16,31 +17,29 @@ interface BookingModalProps {
   initialBooking?: Booking | null;
 }
 
-const professors: Professor[] = ['Olivares', 'Bernabé','Miguel'];
-const subjects: Subject[] = ['Redes', 'Conmutación', 'Administración'];
-
-const generateTimeSlots = (startHour: number, endHour: number) => {
-  const slots = [];
-  for (let i = startHour; i < endHour; i++) {
-    slots.push(`${String(i).padStart(2, '0')}:00`);
-    slots.push(`${String(i).padStart(2, '0')}:30`);
-  }
-  slots.push(`${String(endHour).padStart(2, '0')}:00`);
-  return slots;
-};
-
-// Todos los horarios disponibles: 7am - 9pm
-const allTimeSlots = generateTimeSlots(7, 21);
-
 export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBooking, existingBookings, selectedDate, mode = 'create', initialBooking = null }: BookingModalProps) {
+  const [professors, setProfessors] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<string[]>([]);
   const [studentName, setStudentName] = useState('');
   const [controlNumber, setControlNumber] = useState('');
-  const [subject, setSubject] = useState<Subject>('Redes');
-  const [professor, setProfessor] = useState<Professor>('Olivares');
+  const [subject, setSubject] = useState('');
+  const [professor, setProfessor] = useState('');
   const [date, setDate] = useState(format(selectedDate || new Date(), 'yyyy-MM-dd'));
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('11:00');
   const [error, setError] = useState<string | null>(null);
+
+  // Cargar configuración dinámica
+  useEffect(() => {
+    const loadedProfessors = ConfigService.loadProfessors();
+    const loadedSubjects = ConfigService.loadSubjects();
+    setProfessors(loadedProfessors);
+    setSubjects(loadedSubjects);
+    
+    // Set defaults if empty
+    if (!subject && loadedSubjects.length > 0) setSubject(loadedSubjects[0]);
+    if (!professor && loadedProfessors.length > 0) setProfessor(loadedProfessors[0]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (selectedDate && mode === 'create') {
@@ -51,6 +50,9 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
   useEffect(() => {
     // Set fields when modal opens
     if (isOpen) {
+      const loadedProfessors = ConfigService.loadProfessors();
+      const loadedSubjects = ConfigService.loadSubjects();
+      
       if (mode === 'edit' && initialBooking) {
         setStudentName(initialBooking.student.name);
         setControlNumber(initialBooking.student.controlNumber);
@@ -62,8 +64,8 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
       } else {
         setStudentName('');
         setControlNumber('');
-        setSubject('Redes');
-        setProfessor('Olivares');
+        setSubject(loadedSubjects[0] || '');
+        setProfessor(loadedProfessors[0] || '');
         setStartTime('09:00');
         setEndTime('11:00');
         if (selectedDate) setDate(format(selectedDate, 'yyyy-MM-dd'));
@@ -72,9 +74,19 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
     }
   }, [isOpen, mode, initialBooking, selectedDate]);
 
+  const generateTimeSlots = (startHour: number, endHour: number) => {
+    const slots = [];
+    for (let i = startHour; i < endHour; i++) {
+      slots.push(`${String(i).padStart(2, '0')}:00`);
+      slots.push(`${String(i).padStart(2, '0')}:30`);
+    }
+    slots.push(`${String(endHour).padStart(2, '0')}:00`);
+    return slots;
+  };
+
   // Todos los horarios disponibles para seleccionar (la validación se hace al enviar)
   const availableTimeSlots = useMemo(() => {
-    return allTimeSlots;
+    return generateTimeSlots(7, 21);
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -106,10 +118,11 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
       return;
     }
 
-    // Validar duración (mínimo 2 horas)
-    const durationValidation = BookingService.isValidDuration(startTime, endTime);
-    if (!durationValidation.isValid) {
-      setError('La duración de la reserva debe ser mínimo 2 horas.');
+    // Calcular duración (sin límites)
+    const duration = BookingService.calculateDuration(startTime, endTime);
+    
+    if (duration <= 0) {
+      setError('La hora de fin debe ser mayor que la hora de inicio.');
       return;
     }
 
@@ -137,7 +150,7 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
       day: newBookingDate,
       startTime,
       endTime,
-      duration: durationValidation.duration,
+      duration,
     };
 
     if (mode === 'edit' && initialBooking && onUpdateBooking) {
@@ -212,7 +225,7 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
                 <select 
                   id="subject" 
                   value={subject} 
-                  onChange={(e) => setSubject(e.target.value as Subject)} 
+                  onChange={(e) => setSubject(e.target.value)} 
                   className="w-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 >
                   {subjects.map(s => <option key={s} value={s}>{s}</option>)}
@@ -227,7 +240,7 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
                 <select 
                   id="professor" 
                   value={professor} 
-                  onChange={(e) => setProfessor(e.target.value as Professor)} 
+                  onChange={(e) => setProfessor(e.target.value)} 
                   className="w-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 >
                   {professors.map(p => <option key={p} value={p}>{p}</option>)}
@@ -285,8 +298,7 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
                 <ul className="list-disc list-inside ml-2 text-xs">
                   <li>No se puede apartar más de 1 vez si en esa hora y día ya está apartado</li>
                   <li>No debe existir horas sobrepuestas</li>
-                  <li>Mínimo 2 horas</li>
-                  <li>Sin límite máximo (permitido para exámenes)</li>
+                  <li>Sin límite de duración (1, 2, 3, 4+ horas permitidas)</li>
                 </ul>
               </div>
 
