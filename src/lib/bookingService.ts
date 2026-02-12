@@ -140,11 +140,13 @@ class BookingService {
   // Validar conflictos de horario - No permite horas sobrepuestas en el mismo día
   static hasTimeConflict(
     newBooking: { day: Date; startTime: string; endTime: string; professor: string },
-    existingBookings?: Booking[]
+    existingBookings?: Booking[],
+    excludeId?: string
   ): boolean {
     const bookings = existingBookings || this.loadBookings();
     
     return bookings.some(booking => {
+      if (excludeId && booking.id === excludeId) return false;
       // Mismo día
       const sameDay = booking.day.toDateString() === newBooking.day.toDateString();
       if (!sameDay) return false;
@@ -163,6 +165,48 @@ class BookingService {
   private static timeToMinutes(time: string): number {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
+  }
+
+  // Actualizar una reserva existente (sin alterar materiales si no se pasan)
+  static updateBooking(id: string, updated: Omit<Booking, 'id'>): boolean {
+    try {
+      const bookings = this.loadBookings();
+      const idx = bookings.findIndex(b => b.id === id);
+      if (idx === -1) return false;
+
+      const prev = bookings[idx];
+      const merged: Booking = {
+        ...prev,
+        ...updated,
+        id: prev.id,
+        // Si no se pasaron materiales en updated, conserva los anteriores
+        materials: (updated as any).materials !== undefined ? (updated as any).materials : prev.materials,
+        // Asegurar que day sea Date
+        day: updated.day instanceof Date ? updated.day : new Date((updated as any).day)
+      };
+
+      bookings[idx] = merged;
+      this.saveBookings(bookings.sort((a, b) => a.day.getTime() - b.day.getTime()));
+      return true;
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      return false;
+    }
+  }
+
+  // Eliminar una reserva por ID
+  static deleteBooking(id: string): boolean {
+    try {
+      const bookings = this.loadBookings();
+      const next = bookings.filter(b => b.id !== id);
+      const changed = next.length !== bookings.length;
+      if (!changed) return false;
+      this.saveBookings(next);
+      return true;
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      return false;
+    }
   }
 
   // Actualizar los materiales de una reserva
@@ -190,16 +234,11 @@ class BookingService {
     return date >= today;
   }
 
-  // Validar duración (1-2 horas)
-  static isValidDuration(startTime: string, endTime: string): { isValid: boolean; duration: number } {
+  // Calcular duración sin validación (cualquier duración permitida)
+  static calculateDuration(startTime: string, endTime: string): number {
     const startMinutes = this.timeToMinutes(startTime);
     const endMinutes = this.timeToMinutes(endTime);
-    const duration = (endMinutes - startMinutes) / 60; // Convert to hours
-
-    return {
-      isValid: duration >= 1 && duration <= 2,
-      duration
-    };
+    return (endMinutes - startMinutes) / 60; // Convert to hours
   }
 
 

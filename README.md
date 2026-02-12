@@ -35,11 +35,22 @@ Si no tienes Node.js instalado:
 3. Selecciona profesor, materia y horarios
 4. Click **"Confirmar Reserva"**
 
+### Editar/Eliminar Reservas
+1. Click en cualquier día con reservas
+2. **Doble click** en la reserva que deseas modificar
+3. Selecciona **"Actualizar"** o **"Eliminar"**
+
 ### Gestionar Materiales
 1. Click en cualquier **reserva existente**
-2. Se abre el modal de materiales
+2. Click en el botón **"Materiales"**
 3. Agrega los materiales necesarios
 4. Click **"Guardar Materiales"**
+
+### Administrar Profesores y Materias
+1. Click en el botón **"⚙️ Administración"** en el header
+2. **Añadir:** Escribe el nombre y click "Agregar"
+3. **Eliminar:** Click en el 🗑️ junto al nombre
+4. **Restaurar:** Click "Restaurar valores por defecto" si necesitas volver a la configuración inicial
 
 ### Exportar/Importar Datos
 1. Usa los botones **"Exportar Datos"** / **"Importar Datos"**
@@ -82,9 +93,17 @@ npm run build  # Crear versión optimizada
 
 ### ✅ Gestión de Reservas
 - Calendario visual mensual
-- Reservas por profesor (Olivares, Bernabé, Miguel)
-- Validación de horarios y conflictos
-- Materias: Redes, Conmutación, Administración
+- **Sistema escalable:** Agrega/elimina profesores y materias desde la interfaz
+- Validación de horarios y conflictos (sin horas sobrepuestas)
+- **Duración flexible:** Sin límites (1, 2, 3, 4+ horas permitidas)
+- **Editar/Eliminar:** Doble click en cualquier reserva para modificar o eliminar
+
+### ✅ Panel de Administración
+- **Gestionar Profesores:** Añade o elimina profesores dinámicamente
+- **Gestionar Materias:** Añade o elimina materias sin modificar código
+- **Persistencia automática:** Los cambios se guardan localmente
+- **Restauración:** Vuelve a la configuración por defecto cuando lo necesites
+- **Sin mantenimiento:** Diseñado para funcionar a largo plazo sin intervención técnica
 
 ### ✅ Control de Materiales
 - Categorías: Cables, Routers, Servidores, Firewall, Otros
@@ -132,6 +151,8 @@ Si tienes problemas:
 - **v1.1.0** - Gestión de materiales
 - **v1.2.0** - Exportar/Importar datos
 - **v1.3.0** - Ejecutable portable
+- **v1.4.0** - Editar/Eliminar reservas (doble click)
+- **v1.5.0** - Panel de administración escalable + Duración flexible
 
 ---
 

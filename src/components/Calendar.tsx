@@ -5,6 +5,7 @@ import MonthlyCalendar from './MonthlyCalendar';
 import BookingModal from './BookingModal';
 import DayDetailModal from './DayDetailModal';
 import DataManager from './DataManager';
+import AdminPanel from './AdminPanel';
 import { Booking } from '@/types';
 import BookingService from '@/lib/bookingService';
 
@@ -15,8 +16,11 @@ export default function Calendar() {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedDateForNewBooking, setSelectedDateForNewBooking] = useState<Date | null>(null);
     const [selectedDateForDetail, setSelectedDateForDetail] = useState<Date | null>(null);
+    const [bookingToEdit, setBookingToEdit] = useState<Booking | null>(null);
+    const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
 
     // Cargar datos al inicializar
     useEffect(() => {
@@ -54,12 +58,47 @@ export default function Calendar() {
         }
     };
 
+    const handleUpdateBooking = (id: string, updated: Omit<Booking, 'id'>) => {
+        try {
+            BookingService.updateBooking(id, updated);
+            const updatedBookings = BookingService.loadBookings();
+            setBookings(updatedBookings);
+            setIsEditModalOpen(false);
+            setBookingToEdit(null);
+        } catch (error) {
+            console.error('Error updating booking:', error);
+        }
+    };
+
+    const handleDeleteBooking = (id: string) => {
+        try {
+            const ok = BookingService.deleteBooking(id);
+            if (ok) {
+                const updatedBookings = BookingService.loadBookings();
+                setBookings(updatedBookings);
+            }
+        } catch (error) {
+            console.error('Error deleting booking:', error);
+        }
+    };
+
     const handleSelectDay = (day: Date) => {
         setSelectedDateForDetail(day);
     };
 
+    const handleEditRequest = (booking: Booking) => {
+        setBookingToEdit(booking);
+        setIsEditModalOpen(true);
+    };
+
     const handleBookingUpdate = () => {
         // Recargar las reservas cuando se actualicen los materiales
+        const updatedBookings = BookingService.loadBookings();
+        setBookings(updatedBookings);
+    };
+
+    const handleConfigChange = () => {
+        // Forzar recarga cuando cambie la configuración de profesores/materias
         const updatedBookings = BookingService.loadBookings();
         setBookings(updatedBookings);
     };
@@ -82,6 +121,7 @@ export default function Calendar() {
                 onNextMonth={handleNextMonth}
                 onToday={handleToday}
                 onNewBooking={() => handleOpenNewBooking()}
+                onOpenAdmin={() => setIsAdminPanelOpen(true)}
             />
             
             {/* Gestor de Datos */}
@@ -99,6 +139,15 @@ export default function Calendar() {
                 existingBookings={bookings}
                 selectedDate={selectedDateForNewBooking}
             />
+            <BookingModal
+                isOpen={isEditModalOpen}
+                onClose={() => { setIsEditModalOpen(false); setBookingToEdit(null); }}
+                onUpdateBooking={handleUpdateBooking}
+                existingBookings={bookings}
+                selectedDate={bookingToEdit ? bookingToEdit.day : null}
+                mode="edit"
+                initialBooking={bookingToEdit}
+            />
             <DayDetailModal
                 isOpen={!!selectedDateForDetail}
                 onClose={() => setSelectedDateForDetail(null)}
@@ -106,6 +155,13 @@ export default function Calendar() {
                 bookings={bookings.filter(b => selectedDateForDetail && format(b.day, 'yyyy-MM-dd') === format(selectedDateForDetail, 'yyyy-MM-dd'))}
                 onNewBooking={handleOpenNewBooking}
                 onBookingUpdate={handleBookingUpdate}
+                onEditBooking={handleEditRequest}
+                onDeleteBooking={handleDeleteBooking}
+            />
+            <AdminPanel
+                isOpen={isAdminPanelOpen}
+                onClose={() => setIsAdminPanelOpen(false)}
+                onConfigChange={handleConfigChange}
             />
         </div>
     );
