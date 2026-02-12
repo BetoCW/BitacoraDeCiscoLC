@@ -22,6 +22,8 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
   const [subjects, setSubjects] = useState<string[]>([]);
   const [studentName, setStudentName] = useState('');
   const [controlNumber, setControlNumber] = useState('');
+  const [teamSize, setTeamSize] = useState<number | ''>('');
+  const [teamMembersText, setTeamMembersText] = useState('');
   const [subject, setSubject] = useState('');
   const [professor, setProfessor] = useState('');
   const [date, setDate] = useState(format(selectedDate || new Date(), 'yyyy-MM-dd'));
@@ -56,6 +58,8 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
       if (mode === 'edit' && initialBooking) {
         setStudentName(initialBooking.student.name);
         setControlNumber(initialBooking.student.controlNumber);
+        setTeamSize(initialBooking.teamSize ?? '');
+        setTeamMembersText((initialBooking.teamMembers || []).map(m => m.controlNumber).join(', '));
         setSubject(initialBooking.subject);
         setProfessor(initialBooking.professor);
         setDate(format(initialBooking.day, 'yyyy-MM-dd'));
@@ -140,6 +144,39 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
       return;
     }
 
+    // Validación de equipo: si se indica un tamaño de equipo, se deben proporcionar los números de control
+    let parsedTeamMembers: { name?: string; controlNumber: string }[] | undefined = undefined;
+    const ts = teamSize === '' ? 0 : Number(teamSize);
+    if (ts > 0) {
+      const tokens = teamMembersText.split(/[,\n;]+/).map(t => t.trim()).filter(Boolean);
+      if (tokens.length !== ts) {
+        setError(`Se indicó un equipo de ${ts} integrantes, pero se proporcionaron ${tokens.length}.`);
+        return;
+      }
+
+      // Validar formato y unicidad
+      const unique = new Set<string>();
+      for (const t of tokens) {
+        if (!/^\d{8}$/.test(t)) {
+          setError('Cada número de control del equipo debe tener exactamente 8 dígitos.');
+          return;
+        }
+        if (unique.has(t)) {
+          setError('Los números de control del equipo deben ser únicos.');
+          return;
+        }
+        unique.add(t);
+      }
+
+      parsedTeamMembers = tokens.map(t => ({ controlNumber: t }));
+
+      // Evitar que miembros del equipo reserven el mismo día en otra reserva
+      if (BookingService.hasTeamOverlap(parsedTeamMembers, newBookingDate, existingBookings, excludeId)) {
+        setError('Algún miembro del equipo ya tiene una reserva en ese día. Evita duplicados.');
+        return;
+      }
+    }
+
     const payload: Omit<Booking, 'id'> = {
       student: {
         name: studentName,
@@ -151,6 +188,8 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
       startTime,
       endTime,
       duration,
+      teamSize: ts > 0 ? ts : undefined,
+      teamMembers: parsedTeamMembers as any,
     };
 
     if (mode === 'edit' && initialBooking && onUpdateBooking) {
@@ -215,6 +254,42 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
                     maxLength={8}
                   />
                 </div>
+              </div>
+
+              {/* Información del Equipo (opcional) */}
+              <div>
+                <label htmlFor="teamSize" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tamaño del equipo (opcional)
+                </label>
+                <input
+                  type="number"
+                  id="teamSize"
+                  value={teamSize === '' ? '' : String(teamSize)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === '') setTeamSize('');
+                    else setTeamSize(Math.max(0, Number(v)));
+                  }}
+                  min={1}
+                  className="w-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Ej: 4"
+                />
+                <p className="text-xs text-gray-500 mt-1">Si indicas el tamaño, debes proporcionar los números de control de los integrantes.</p>
+              </div>
+
+              <div>
+                <label htmlFor="teamMembers" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Números de control del equipo (coma o nueva línea separados)
+                </label>
+                <textarea
+                  id="teamMembers"
+                  value={teamMembersText}
+                  onChange={(e) => setTeamMembersText(e.target.value)}
+                  className="w-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="20401234, 20405678, 20400999"
+                  rows={3}
+                />
+                <p className="text-xs text-gray-500 mt-1">Incluye los números de control completos (8 dígitos) de cada integrante.</p>
               </div>
 
               {/* Materia */}

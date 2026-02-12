@@ -28,4 +28,7 @@ export interface Booking {
   endTime: string; // e.g., "11:00"
   duration: number; // hours (sin límite)
   materials?: Material[]; // Optional materials list
+  // Opcional: información del equipo cuando la reserva la hace un alumno en representación
+  teamSize?: number; // número de integrantes esperados en el equipo
+  teamMembers?: Student[]; // lista de integrantes con su número de control
 }

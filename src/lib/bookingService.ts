@@ -161,6 +161,32 @@ class BookingService {
     });
   }
 
+  // Verificar si algún integrante del nuevo equipo ya tiene una reserva en el mismo día
+  static hasTeamOverlap(
+    newTeamMembers: { controlNumber: string }[] | undefined,
+    newBookingDay: Date,
+    existingBookings?: Booking[],
+    excludeId?: string
+  ): boolean {
+    if (!newTeamMembers || newTeamMembers.length === 0) return false;
+
+    const bookings = existingBookings || this.loadBookings();
+    const newSet = new Set(newTeamMembers.map(m => String(m.controlNumber)));
+
+    return bookings.some(booking => {
+      if (excludeId && booking.id === excludeId) return false;
+      const sameDay = booking.day.toDateString() === newBookingDay.toDateString();
+      if (!sameDay) return false;
+
+      // Comparar con miembros registrados en la reserva existente
+      const existingMembers = (booking.teamMembers || []).map(m => String(m.controlNumber));
+      // Añadir también el alumno principal de la reserva existente
+      if (booking.student && booking.student.controlNumber) existingMembers.push(String(booking.student.controlNumber));
+
+      return existingMembers.some(cn => newSet.has(cn));
+    });
+  }
+
   // Convertir tiempo "HH:mm" a minutos
   private static timeToMinutes(time: string): number {
     const [hours, minutes] = time.split(':').map(Number);
