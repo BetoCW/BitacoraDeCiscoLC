@@ -279,14 +279,16 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
                 </div>
 
                 <div className="space-y-3">
-                  <AnimatePresence initial={false}>
+                  <AnimatePresence initial={false} mode="popLayout">
                     {teamMembers.map((member, index) => (
                       <motion.div
                         key={member.id}
+                        layout
                         initial={{ opacity: 0, height: 0, marginBottom: 0 }}
                         animate={{ opacity: 1, height: 'auto', marginBottom: 12 }}
-                        exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: 'hidden' }}
+                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                         transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
                       >
                         <div className={`group relative grid grid-cols-1 md:grid-cols-12 gap-3 p-4 rounded-lg border transition-all duration-200 ${index === 0 ? 'bg-blue-50/50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-800' : 'bg-gray-50 border-gray-200 dark:bg-gray-700/30 dark:border-gray-700'}`}>
 
