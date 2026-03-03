@@ -1,6 +1,7 @@
 import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, isToday, startOfMonth, startOfWeek } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Booking } from '@/types';
+import ConfigService from '@/lib/configService';
 
 interface MonthlyCalendarProps {
   month: Date;
@@ -16,6 +17,8 @@ export default function MonthlyCalendar({ month, bookings, onSelectDay }: Monthl
 
   const days = eachDayOfInterval({ start: startDate, end: endDate });
   const weekdays = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+
+  const professorColors = ConfigService.loadProfessorColors();
 
   const getBookingsForDay = (day: Date) => {
     return bookings.filter(booking => isSameDay(booking.day, day));
@@ -48,14 +51,19 @@ export default function MonthlyCalendar({ month, bookings, onSelectDay }: Monthl
                 {format(day, 'd')}
               </span>
               <div className="flex-grow mt-1 flex flex-col gap-1 overflow-hidden">
-                {dayBookings.slice(0, 2).map(booking => (
-                  <div key={booking.id} className={cn(
-                    'w-full h-1.5 rounded-full',
-                    booking.professor === 'Miguel' ? 'bg-amber-500' : 'bg-blue-500'
-                  )}></div>
-                ))}
-                {dayBookings.length > 2 && (
-                  <span className="text-xs text-gray-500 mt-auto">+{dayBookings.length - 2} más</span>
+                {dayBookings.slice(0, 3).map(booking => {
+                  const color = professorColors[booking.professor] || '#6b7280';
+                  return (
+                    <div
+                      key={booking.id}
+                      className="w-full h-1.5 rounded-full"
+                      style={{ backgroundColor: color }}
+                      title={`${booking.professor} — ${booking.classroom || 'Cisco 1'}`}
+                    />
+                  );
+                })}
+                {dayBookings.length > 3 && (
+                  <span className="text-xs text-gray-500 mt-auto">+{dayBookings.length - 3} más</span>
                 )}
               </div>
             </div>

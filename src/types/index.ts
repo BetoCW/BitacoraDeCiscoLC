@@ -23,6 +23,7 @@ export interface Booking {
   professor: Professor;
   student: Student;
   subject: Subject;
+  classroom: 'Cisco 1' | 'Cisco 2'; // Aula del laboratorio
   day: Date;
   startTime: string; // e.g., "09:00"
   endTime: string; // e.g., "11:00"
@@ -31,4 +32,13 @@ export interface Booking {
   // Opcional: información del equipo cuando la reserva la hace un alumno en representación
   teamSize?: number; // número de integrantes esperados en el equipo
   teamMembers?: Student[]; // lista de integrantes con su número de control
+  teamName?: string; // Nombre del equipo registrado (si aplica)
+}
+
+export interface Team {
+  id: string;
+  name: string;       // Nombre del equipo, ej. "Cisqueros.net"
+  professor: string;  // Profesor titular
+  subject: string;    // Materia
+  members: Student[]; // Lista completa de integrantes
 }

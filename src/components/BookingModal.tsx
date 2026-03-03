@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Plus, Trash2, Users } from 'lucide-react';
-import { Booking } from '@/types';
+import { X, Plus, Trash2, Users, Search } from 'lucide-react';
+import { Booking, Team } from '@/types';
 import { format, parse } from 'date-fns';
 import BookingService from '@/lib/bookingService';
 import ConfigService from '@/lib/configService';
+import TeamService from '@/lib/teamService';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -32,8 +33,16 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
     { id: crypto.randomUUID(), name: '', controlNumber: '' }
   ]);
 
+  // Team search / autocomplete
+  const [teamQuery, setTeamQuery] = useState('');
+  const [teamSuggestions, setTeamSuggestions] = useState<Team[]>([]);
+  const [selectedTeamName, setSelectedTeamName] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const teamInputRef = useRef<HTMLInputElement>(null);
+
   const [subject, setSubject] = useState('');
   const [professor, setProfessor] = useState('');
+  const [classroom, setClassroom] = useState<'Cisco 1' | 'Cisco 2'>('Cisco 1');
   const [date, setDate] = useState(format(selectedDate || new Date(), 'yyyy-MM-dd'));
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('11:00');
@@ -87,14 +96,19 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
         setTeamMembers(members);
         setSubject(initialBooking.subject);
         setProfessor(initialBooking.professor);
+        setClassroom(initialBooking.classroom || 'Cisco 1');
         setDate(format(initialBooking.day, 'yyyy-MM-dd'));
         setStartTime(initialBooking.startTime);
         setEndTime(initialBooking.endTime);
       } else {
         // Reset for create mode
         setTeamMembers([{ id: crypto.randomUUID(), name: '', controlNumber: '' }]);
+        setTeamQuery('');
+        setSelectedTeamName(null);
+        setTeamSuggestions([]);
         setSubject(loadedSubjects[0] || '');
         setProfessor(loadedProfessors[0] || '');
+        setClassroom('Cisco 1');
         setStartTime('09:00');
         setEndTime('11:00');
         if (selectedDate) setDate(format(selectedDate, 'yyyy-MM-dd'));
@@ -102,6 +116,41 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
       setError(null);
     }
   }, [isOpen, mode, initialBooking, selectedDate]);
+
+  // ── Team search handlers ────────────────────────────────────────────────
+  const handleTeamQueryChange = (value: string) => {
+    setTeamQuery(value);
+    setSelectedTeamName(null);
+    if (value.trim()) {
+      const results = TeamService.findByName(value);
+      setTeamSuggestions(results);
+      setShowSuggestions(true);
+    } else {
+      setTeamSuggestions(TeamService.loadTeams());
+      setShowSuggestions(true);
+    }
+  };
+
+  const handleSelectTeam = (team: Team) => {
+    setSelectedTeamName(team.name);
+    setTeamQuery(team.name);
+    setShowSuggestions(false);
+    // Autocompletar campos
+    setProfessor(team.professor);
+    setSubject(team.subject);
+    // Autocompletar integrantes
+    setTeamMembers(team.members.map(m => ({
+      id: crypto.randomUUID(),
+      name: m.name,
+      controlNumber: m.controlNumber
+    })));
+  };
+
+  const handleTeamInputFocus = () => {
+    const all = TeamService.loadTeams();
+    setTeamSuggestions(teamQuery.trim() ? TeamService.findByName(teamQuery) : all);
+    setShowSuggestions(true);
+  };
 
   const generateTimeSlots = (startHour: number, endHour: number) => {
     const slots = [];
@@ -180,15 +229,16 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
       return;
     }
 
-    // Validate Time Conflict
+    // Validate Time Conflict (per classroom)
     const excludeId = mode === 'edit' && initialBooking ? initialBooking.id : undefined;
     if (BookingService.hasTimeConflict({
       day: newBookingDate,
       startTime,
       endTime,
-      professor
+      professor,
+      classroom
     }, existingBookings, excludeId)) {
-      setError('Ya existe una reserva en ese horario. No se permiten horas sobrepuestas.');
+      setError(`Ya existe una reserva en ${classroom} en ese horario. No se permiten horas sobrepuestas.`);
       return;
     }
 
@@ -209,12 +259,14 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
       student: leader,
       subject,
       professor,
+      classroom,
       day: newBookingDate,
       startTime,
       endTime,
       duration,
       teamSize: validMembers.length,
       teamMembers: restOfTeam,
+      teamName: selectedTeamName ?? undefined,
     };
 
     if (mode === 'edit' && initialBooking && onUpdateBooking) {
@@ -266,6 +318,75 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
 
             {/* Content */}
             <form id="booking-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+
+              {/* Buscador de equipo pre-registrado */}
+              <div className="relative">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-2">
+                  <Search size={15} className="text-indigo-500" />
+                  Cargar Equipo Registrado
+                  <span className="text-xs font-normal text-gray-400">(opcional)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    ref={teamInputRef}
+                    type="text"
+                    value={teamQuery}
+                    onChange={e => handleTeamQueryChange(e.target.value)}
+                    onFocus={handleTeamInputFocus}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    placeholder='Busca "Cisqueros.net" o deja vacío para agregar manualmente...'
+                    className={`w-full bg-white dark:bg-gray-800 border rounded-lg px-3 py-2.5 pr-10 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow ${selectedTeamName
+                      ? 'border-indigo-400 dark:border-indigo-600 bg-indigo-50/40 dark:bg-indigo-900/10'
+                      : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                  />
+                  {selectedTeamName && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500">
+                      <Users size={16} />
+                    </span>
+                  )}
+                </div>
+                {/* Dropdown de sugerencias */}
+                <AnimatePresence>
+                  {showSuggestions && teamSuggestions.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden"
+                    >
+                      {teamSuggestions.map(team => (
+                        <button
+                          key={team.id}
+                          type="button"
+                          onMouseDown={() => handleSelectTeam(team)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-start gap-3"
+                        >
+                          <Users size={15} className="text-indigo-500 mt-0.5 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{team.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {team.members.length} integrante{team.members.length !== 1 ? 's' : ''} · {team.subject} · Prof. {team.professor}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                  {showSuggestions && teamQuery.trim() && teamSuggestions.length === 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl px-4 py-3 text-sm text-gray-500 dark:text-gray-400"
+                    >
+                      No se encontró ningún equipo con ese nombre.
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="h-px bg-gray-100 dark:bg-gray-700" />
 
               {/* Sección de Integrantes */}
               <div className="space-y-4">
@@ -360,6 +481,29 @@ export default function BookingModal({ isOpen, onClose, onAddBooking, onUpdateBo
 
               {/* Detalles de la Reserva */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+
+                {/* Aula selector (full width) */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    🏫 Aula del Laboratorio
+                  </label>
+                  <div className="flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 w-fit">
+                    {(['Cisco 1', 'Cisco 2'] as const).map(room => (
+                      <button
+                        key={room}
+                        type="button"
+                        onClick={() => setClassroom(room)}
+                        className={`px-6 py-2.5 text-sm font-bold transition-colors ${classroom === room
+                            ? 'bg-blue-600 text-white shadow-inner'
+                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                      >
+                        {room}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Materia

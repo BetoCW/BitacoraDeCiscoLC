@@ -11,6 +11,28 @@ import BookingService from '@/lib/bookingService';
 
 const today = new Date();
 
+function useTheme() {
+    const [isDark, setIsDark] = useState<boolean>(() => {
+        // Read from localStorage, defaulting to dark (current behavior)
+        const stored = localStorage.getItem('theme');
+        if (stored !== null) return stored === 'dark';
+        return document.documentElement.classList.contains('dark');
+    });
+
+    useEffect(() => {
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }, [isDark]);
+
+    const toggleTheme = () => setIsDark(prev => !prev);
+
+    return { isDark, toggleTheme };
+}
+
 export default function Calendar() {
     const [currentMonth, setCurrentMonth] = useState(startOfMonth(today));
     const [bookings, setBookings] = useState<Booking[]>([]);
@@ -21,6 +43,8 @@ export default function Calendar() {
     const [selectedDateForDetail, setSelectedDateForDetail] = useState<Date | null>(null);
     const [bookingToEdit, setBookingToEdit] = useState<Booking | null>(null);
     const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+
+    const { isDark, toggleTheme } = useTheme();
 
     // Cargar datos al inicializar
     useEffect(() => {
@@ -34,7 +58,7 @@ export default function Calendar() {
                 setIsLoading(false);
             }
         };
-        
+
         loadBookings();
     }, []);
 
@@ -43,8 +67,8 @@ export default function Calendar() {
     const handleToday = () => setCurrentMonth(startOfMonth(today));
 
     const handleOpenNewBooking = (date?: Date) => {
-      setSelectedDateForNewBooking(date || new Date());
-      setIsBookingModalOpen(true);
+        setSelectedDateForNewBooking(date || new Date());
+        setIsBookingModalOpen(true);
     };
 
     const handleAddBooking = (newBooking: Omit<Booking, 'id'>) => {
@@ -92,15 +116,14 @@ export default function Calendar() {
     };
 
     const handleBookingUpdate = () => {
-        // Recargar las reservas cuando se actualicen los materiales
         const updatedBookings = BookingService.loadBookings();
         setBookings(updatedBookings);
     };
 
     const handleConfigChange = () => {
-        // Forzar recarga cuando cambie la configuración de profesores/materias
+        // Force re-render to pick up new professor colors etc.
         const updatedBookings = BookingService.loadBookings();
-        setBookings(updatedBookings);
+        setBookings([...updatedBookings]);
     };
 
     if (isLoading) {
@@ -115,19 +138,21 @@ export default function Calendar() {
 
     return (
         <div className="p-2 sm:p-4 md:p-6 lg:p-8 max-w-screen-2xl mx-auto space-y-6">
-            <CalendarHeader 
+            <CalendarHeader
                 currentMonth={currentMonth}
                 onPrevMonth={handlePrevMonth}
                 onNextMonth={handleNextMonth}
                 onToday={handleToday}
                 onNewBooking={() => handleOpenNewBooking()}
                 onOpenAdmin={() => setIsAdminPanelOpen(true)}
+                isDark={isDark}
+                onToggleTheme={toggleTheme}
             />
-            
+
             {/* Gestor de Datos */}
             <DataManager onDataChange={handleBookingUpdate} />
-            
-            <MonthlyCalendar 
+
+            <MonthlyCalendar
                 month={currentMonth}
                 bookings={bookings}
                 onSelectDay={handleSelectDay}

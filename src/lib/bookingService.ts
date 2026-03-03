@@ -36,10 +36,10 @@ class BookingService {
         ...booking,
         day: booking.day.toISOString()
       }));
-      
+
       // Guardar en localStorage
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(dataToStore));
-      
+
       // Crear backup automático (descarga)
       this.createAutoBackup(dataToStore);
     } catch (error) {
@@ -51,20 +51,20 @@ class BookingService {
   private static createAutoBackup(data: any[]): void {
     // Solo hacer backup si hay más de 3 reservas (evitar spam de archivos)
     if (data.length < 3) return;
-    
+
     // Verificar si necesitamos hacer backup (una vez por día)
     const lastBackup = localStorage.getItem('last_backup_date');
     const today = new Date().toDateString();
-    
+
     if (lastBackup === today) return; // Ya hicimos backup hoy
-    
+
     // Crear archivo de backup
     const backupData = {
       exportDate: new Date().toISOString(),
       version: '1.0',
       bookings: data
     };
-    
+
     localStorage.setItem('last_backup_date', today);
     console.log('📦 Backup automático creado:', backupData);
   }
@@ -81,10 +81,10 @@ class BookingService {
       }))
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
-      type: 'application/json' 
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json'
     });
-    
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -102,14 +102,14 @@ class BookingService {
       reader.onload = (e) => {
         try {
           const data = JSON.parse(e.target?.result as string);
-          
+
           if (data.bookings && Array.isArray(data.bookings)) {
             // Validar y convertir fechas
             const validBookings = data.bookings.map((booking: any) => ({
               ...booking,
               day: booking.day
             }));
-            
+
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(validBookings));
             console.log('✅ Datos importados correctamente:', validBookings.length, 'reservas');
             resolve(true);
@@ -137,21 +137,24 @@ class BookingService {
     return newBooking;
   }
 
-  // Validar conflictos de horario - No permite horas sobrepuestas en el mismo día
+  // Validar conflictos de horario - No permite horas sobrepuestas en el mismo día Y misma aula
   static hasTimeConflict(
-    newBooking: { day: Date; startTime: string; endTime: string; professor: string },
+    newBooking: { day: Date; startTime: string; endTime: string; professor: string; classroom?: string },
     existingBookings?: Booking[],
     excludeId?: string
   ): boolean {
     const bookings = existingBookings || this.loadBookings();
-    
+
     return bookings.some(booking => {
       if (excludeId && booking.id === excludeId) return false;
       // Mismo día
       const sameDay = booking.day.toDateString() === newBooking.day.toDateString();
       if (!sameDay) return false;
 
-      // Verificar solapamiento de horarios (sin importar el profesor)
+      // Misma aula (si ambos tienen classroom definido, comparar; si alguno no lo tiene, comparar igual)
+      if (newBooking.classroom && booking.classroom && newBooking.classroom !== booking.classroom) return false;
+
+      // Verificar solapamiento de horarios
       const existingStart = this.timeToMinutes(booking.startTime);
       const existingEnd = this.timeToMinutes(booking.endTime);
       const newStart = this.timeToMinutes(newBooking.startTime);
@@ -240,9 +243,9 @@ class BookingService {
     try {
       const bookings = this.loadBookings();
       const bookingIndex = bookings.findIndex(b => b.id === bookingId);
-      
+
       if (bookingIndex === -1) return false;
-      
+
       bookings[bookingIndex].materials = materials;
       this.saveBookings(bookings);
       return true;
