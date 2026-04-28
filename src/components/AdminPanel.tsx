@@ -192,7 +192,7 @@ export default function AdminPanel({ isOpen, onClose, onConfigChange }: AdminPan
                             type="text"
                             value={newProfessor}
                             onChange={(e) => setNewProfessor(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleAddProfessor()}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddProfessor(); } }}
                             placeholder="Nombre del profesor"
                             className="flex-1 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
                           />
@@ -207,40 +207,47 @@ export default function AdminPanel({ isOpen, onClose, onConfigChange }: AdminPan
 
                         {/* Professors List */}
                         <div className="space-y-2">
-                          {professors.map((prof) => {
-                            const color = professorColors[prof] || '#6b7280';
-                            return (
-                              <div
-                                key={prof}
-                                className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm gap-3"
-                              >
-                                {/* Color indicator bar */}
-                                <div
-                                  className="w-3 h-8 rounded-full shrink-0"
-                                  style={{ backgroundColor: color }}
-                                />
-                                <span className="font-medium text-gray-900 dark:text-gray-100 flex-1">{prof}</span>
-                                {/* Color picker */}
-                                <div className="flex items-center gap-2">
-                                  <label className="text-xs text-gray-500 dark:text-gray-400">Color:</label>
-                                  <input
-                                    type="color"
-                                    value={color}
-                                    onChange={(e) => handleColorChange(prof, e.target.value)}
-                                    className="w-8 h-8 rounded cursor-pointer border-0 p-0.5 bg-transparent"
-                                    title={`Cambiar color de ${prof}`}
-                                  />
-                                </div>
-                                <button
-                                  onClick={() => handleRemoveProfessor(prof)}
-                                  className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition-colors"
-                                  disabled={professors.length <= 1}
+                          <AnimatePresence initial={false} mode="popLayout">
+                            {professors.map((prof) => {
+                              const color = professorColors[prof] || '#6b7280';
+                              return (
+                                <motion.div
+                                  key={prof}
+                                  layout
+                                  initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                                  animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                                  exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm gap-3"
                                 >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            );
-                          })}
+                                  {/* Color indicator bar */}
+                                  <div
+                                    className="w-3 h-8 rounded-full shrink-0"
+                                    style={{ backgroundColor: color }}
+                                  />
+                                  <span className="font-medium text-gray-900 dark:text-gray-100 flex-1">{prof}</span>
+                                  {/* Color picker */}
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-500 dark:text-gray-400">Color:</label>
+                                    <input
+                                      type="color"
+                                      value={color}
+                                      onChange={(e) => handleColorChange(prof, e.target.value)}
+                                      className="w-8 h-8 rounded cursor-pointer border-0 p-0.5 bg-transparent"
+                                      title={`Cambiar color de ${prof}`}
+                                    />
+                                  </div>
+                                  <button
+                                    onClick={() => handleRemoveProfessor(prof)}
+                                    className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition-colors"
+                                    disabled={professors.length <= 1}
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </motion.div>
+                              );
+                            })}
+                          </AnimatePresence>
                         </div>
 
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
@@ -261,7 +268,7 @@ export default function AdminPanel({ isOpen, onClose, onConfigChange }: AdminPan
                             type="text"
                             value={newSubject}
                             onChange={(e) => setNewSubject(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleAddSubject()}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSubject(); } }}
                             placeholder="Nombre de la materia"
                             className="flex-1 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
                           />
@@ -276,21 +283,28 @@ export default function AdminPanel({ isOpen, onClose, onConfigChange }: AdminPan
 
                         {/* Subjects List */}
                         <div className="space-y-2">
-                          {subjects.map((subj) => (
-                            <div
-                              key={subj}
-                              className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm"
-                            >
-                              <span className="font-medium text-gray-900 dark:text-gray-100">{subj}</span>
-                              <button
-                                onClick={() => handleRemoveSubject(subj)}
-                                className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition-colors"
-                                disabled={subjects.length <= 1}
+                          <AnimatePresence initial={false} mode="popLayout">
+                            {subjects.map((subj) => (
+                              <motion.div
+                                key={subj}
+                                layout
+                                initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                                exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm"
                               >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          ))}
+                                <span className="font-medium text-gray-900 dark:text-gray-100">{subj}</span>
+                                <button
+                                  onClick={() => handleRemoveSubject(subj)}
+                                  className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition-colors"
+                                  disabled={subjects.length <= 1}
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
                         </div>
                       </div>
                     </div>

@@ -1,5 +1,5 @@
 import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, isToday, startOfMonth, startOfWeek } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, isBookingMissed, MISSED_COLOR } from '@/lib/utils';
 import { Booking } from '@/types';
 import ConfigService from '@/lib/configService';
 
@@ -52,13 +52,18 @@ export default function MonthlyCalendar({ month, bookings, onSelectDay }: Monthl
               </span>
               <div className="flex-grow mt-1 flex flex-col gap-1 overflow-hidden">
                 {dayBookings.slice(0, 3).map(booking => {
-                  const color = professorColors[booking.professor] || '#6b7280';
+                  const missed = isBookingMissed(booking);
+                  const baseColor = professorColors[booking.professor] || '#6b7280';
+                  const color = missed ? MISSED_COLOR : baseColor;
                   return (
                     <div
                       key={booking.id}
-                      className="w-full h-1.5 rounded-full"
+                      className={cn(
+                        'w-full h-1.5 rounded-full',
+                        missed && 'opacity-60'
+                      )}
                       style={{ backgroundColor: color }}
-                      title={`${booking.professor} — ${booking.classroom || 'Cisco 1'}`}
+                      title={`${booking.professor}${missed ? ' (faltó)' : ''} — ${booking.classroom || 'Cisco 1'}`}
                     />
                   );
                 })}

@@ -255,6 +255,26 @@ class BookingService {
     }
   }
 
+  // Marcar la asistencia de una reserva: true = asistió, false = faltó, undefined = sin marcar
+  static setBookingAttendance(bookingId: string, attended: boolean | undefined): boolean {
+    try {
+      const bookings = this.loadBookings();
+      const idx = bookings.findIndex(b => b.id === bookingId);
+      if (idx === -1) return false;
+
+      if (attended === undefined) {
+        delete bookings[idx].attended;
+      } else {
+        bookings[idx].attended = attended;
+      }
+      this.saveBookings(bookings);
+      return true;
+    } catch (error) {
+      console.error('Error updating booking attendance:', error);
+      return false;
+    }
+  }
+
   // Validar que la fecha no sea pasada
   static isValidDate(date: Date): boolean {
     const today = new Date();

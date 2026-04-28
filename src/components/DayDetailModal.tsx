@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Plus, Package } from 'lucide-react';
+import { X, Plus, Package, AlertTriangle, Check, XCircle, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Booking, Material } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, isBookingMissed, MISSED_COLOR } from '@/lib/utils';
 import MaterialModal from './MaterialModal';
 import BookingService from '@/lib/bookingService';
 import ConfigService from '@/lib/configService';
@@ -37,11 +37,6 @@ const getBookingStyle = (booking: Booking, hourHeight: number, startHour: number
     height: `${height}px`,
   };
 };
-
-/** Converts a hex color to a slightly-darkened version for hover */
-function hexToHoverClass(hex: string): string {
-  return hex; // we apply opacity via CSS for hover
-}
 
 export default function DayDetailModal({
   isOpen, onClose, date, bookings, onNewBooking, onBookingUpdate, onEditBooking, onDeleteBooking
@@ -97,6 +92,13 @@ export default function DayDetailModal({
     }
   };
 
+  const handleSetAttendance = (attended: boolean | undefined) => {
+    if (!actionBooking) return;
+    BookingService.setBookingAttendance(actionBooking.id, attended);
+    onBookingUpdate();
+    setShowActions(false);
+  };
+
   const handleSaveMaterials = (materials: Material[]) => {
     if (selectedBooking) {
       BookingService.updateBookingMaterials(selectedBooking.id, materials);
@@ -105,27 +107,46 @@ export default function DayDetailModal({
   };
 
   const renderBookingCard = (booking: Booking) => {
-    const color = professorColors[booking.professor] || '#6b7280';
+    const baseColor = professorColors[booking.professor] || '#6b7280';
+    const missed = isBookingMissed(booking);
+    const color = missed ? MISSED_COLOR : baseColor;
+    const explicitAttended = booking.attended === true;
+    const explicitMissed = booking.attended === false;
     return (
       <div
         key={booking.id}
         className={cn(
-          'absolute left-1 right-1 p-2 rounded-lg text-white text-xs flex flex-col overflow-hidden shadow group cursor-pointer transition-opacity hover:opacity-90'
+          'absolute left-1 right-1 p-2 rounded-lg text-white text-xs flex flex-col overflow-hidden shadow group cursor-pointer transition-opacity hover:opacity-90',
+          missed && 'opacity-80 ring-1 ring-red-400/60',
+          explicitAttended && 'ring-1 ring-emerald-400/70'
         )}
         style={{
           ...getBookingStyle(booking, hourHeight, startHour),
           backgroundColor: color,
         }}
         onDoubleClick={() => handleActionsDblClick(booking)}
+        title="Doble clic para opciones (asistencia, editar, eliminar)"
       >
+        {missed && (
+          <span className="absolute top-1 right-1 flex items-center gap-1 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
+            <AlertTriangle size={10} />
+            {explicitMissed ? 'FALTÓ' : 'FALTÓ?'}
+          </span>
+        )}
+        {explicitAttended && (
+          <span className="absolute top-1 right-1 flex items-center gap-1 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
+            <Check size={10} />
+            ASISTIÓ
+          </span>
+        )}
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0">
-            <p className="font-bold truncate">{booking.student.name}</p>
+            <p className={cn('font-bold truncate', missed && 'line-through opacity-90')}>{booking.student.name}</p>
             <p className="truncate text-xs opacity-90">#{booking.student.controlNumber}</p>
             <p className="truncate text-xs">{booking.subject}</p>
             <p className="truncate">{booking.professor}</p>
           </div>
-          <Package size={12} className="opacity-70 group-hover:opacity-100 shrink-0" />
+          {!missed && !explicitAttended && <Package size={12} className="opacity-70 group-hover:opacity-100 shrink-0" />}
         </div>
 
         {booking.materials && booking.materials.length > 0 && (
@@ -273,6 +294,51 @@ export default function DayDetailModal({
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
                 {actionBooking.classroom || 'Cisco 1'} · Prof. {actionBooking.professor}
               </p>
+
+              {/* Registro de asistencia */}
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  Asistencia
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleSetAttendance(true)}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-1 text-sm font-semibold px-3 py-2 rounded-md transition-colors border',
+                      actionBooking.attended === true
+                        ? 'bg-emerald-600 text-white border-emerald-700'
+                        : 'bg-white dark:bg-gray-700 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'
+                    )}
+                    title="Marcar que el equipo asistió"
+                  >
+                    <Check size={16} />
+                    Asistió
+                  </button>
+                  <button
+                    onClick={() => handleSetAttendance(false)}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-1 text-sm font-semibold px-3 py-2 rounded-md transition-colors border',
+                      actionBooking.attended === false
+                        ? 'bg-red-600 text-white border-red-700'
+                        : 'bg-white dark:bg-gray-700 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/30'
+                    )}
+                    title="Marcar que el equipo faltó"
+                  >
+                    <XCircle size={16} />
+                    Faltó
+                  </button>
+                  {actionBooking.attended !== undefined && (
+                    <button
+                      onClick={() => handleSetAttendance(undefined)}
+                      className="flex items-center justify-center gap-1 text-xs font-medium px-2 py-2 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      title="Quitar registro de asistencia"
+                    >
+                      <RotateCcw size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="flex gap-3">
                 <button onClick={handleEditClick} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-2 rounded-md">Actualizar</button>
                 <button onClick={handleDeleteClick} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-2 rounded-md">Eliminar</button>

@@ -33,6 +33,8 @@ export interface Booking {
   teamSize?: number; // número de integrantes esperados en el equipo
   teamMembers?: Student[]; // lista de integrantes con su número de control
   teamName?: string; // Nombre del equipo registrado (si aplica)
+  // Asistencia: true = el equipo asistió, false = faltó, undefined = sin marcar (se infiere por la hora)
+  attended?: boolean;
 }
 
 export interface Team {
